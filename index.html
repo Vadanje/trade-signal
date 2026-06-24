@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1a1a2e">
+<link rel="manifest" href="manifest.json">
+<title>Trade Signal</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  min-height: 100vh;
+  padding: 16px;
+}
+h1 { font-size: 1.3rem; text-align: center; margin-bottom: 16px; color: #00d4aa; }
+.input-section { margin-bottom: 20px; }
+label { display: block; font-size: 0.85rem; color: #888; margin-bottom: 4px; }
+input, select {
+  width: 100%; padding: 14px; font-size: 1.1rem;
+  background: #16213e; border: 1px solid #333; border-radius: 8px;
+  color: #fff; margin-bottom: 12px; -webkit-appearance: none;
+}
+select { padding-right: 40px; }
+.btn {
+  width: 100%; padding: 14px; font-size: 1rem; font-weight: 600;
+  border: none; border-radius: 8px; cursor: pointer;
+}
+.btn-primary { background: #00d4aa; color: #1a1a2e; margin-bottom: 10px; }
+.btn-share { background: #0f3460; color: #00d4aa; }
+.account-card {
+  background: #16213e; border-radius: 10px; padding: 14px;
+  margin-bottom: 14px; border-left: 4px solid #00d4aa;
+}
+.account-card h2 { font-size: 1rem; margin-bottom: 4px; color: #00d4aa; }
+.account-card .risk-info { font-size: 0.75rem; color: #666; margin-bottom: 10px; }
+.field-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 0; border-bottom: 1px solid #222;
+}
+.field-row:last-child { border-bottom: none; }
+.field-label { font-size: 0.8rem; color: #888; }
+.field-value {
+  font-size: 1.1rem; font-weight: 600; font-family: 'SF Mono', monospace;
+  padding: 6px 14px; background: #0f3460; border-radius: 6px;
+  cursor: pointer; transition: background 0.15s; min-width: 80px; text-align: center;
+}
+.field-value:active { background: #00d4aa; color: #1a1a2e; }
+.field-value.copied { background: #00d4aa; color: #1a1a2e; }
+.platform-tag {
+  font-size: 0.65rem; background: #333; padding: 2px 6px;
+  border-radius: 4px; margin-left: 6px; vertical-align: middle;
+}
+.direction-buy { border-left-color: #00d4aa; }
+.direction-sell { border-left-color: #ff6b6b; }
+.direction-sell h2 { color: #ff6b6b; }
+.hidden { display: none; }
+.toast {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  background: #00d4aa; color: #1a1a2e; padding: 10px 20px;
+  border-radius: 20px; font-size: 0.85rem; font-weight: 600;
+  opacity: 0; transition: opacity 0.2s; pointer-events: none;
+}
+.toast.show { opacity: 1; }
+.direction-toggle {
+  display: flex; gap: 8px; margin-bottom: 12px;
+}
+.direction-toggle button {
+  flex: 1; padding: 12px; font-size: 1rem; font-weight: 600;
+  border: 2px solid #333; border-radius: 8px; background: #16213e;
+  color: #888; cursor: pointer;
+}
+.direction-toggle button.active-buy { border-color: #00d4aa; color: #00d4aa; }
+.direction-toggle button.active-sell { border-color: #ff6b6b; color: #ff6b6b; }
+</style>
+</head>
+<body>
+
+<h1>📊 Trade Signal Calculator</h1>
+
+<div id="inputSection" class="input-section">
+  <div class="direction-toggle">
+    <button id="btnBuy" onclick="setDirection('buy')">BUY</button>
+    <button id="btnSell" onclick="setDirection('sell')">SELL</button>
+  </div>
+  <label>Entry Price</label>
+  <input type="number" id="entry" step="0.00001" placeholder="e.g. 1.26450" inputmode="decimal">
+  <label>Stop Loss Price</label>
+  <input type="number" id="sl" step="0.00001" placeholder="e.g. 1.26200" inputmode="decimal">
+  <button class="btn btn-primary" onclick="calculate()">Calculate</button>
+</div>
+
+<div id="results" class="hidden"></div>
+<div id="shareSection" class="hidden">
+  <button class="btn btn-share" onclick="shareSignal()">📤 Share Signal Link</button>
+</div>
+
+<div class="toast" id="toast">Copied!</div>
+
+<script>
+let direction = null;
+
+const ACCOUNTS = [
+  { name: 'FTMO 150K', risk: 875, platform: 'cTrader', format: 'pips' },
+  { name: '5ers 100K', risk: 700, platform: 'cTrader', format: 'pips' },
+  { name: 'QuantTekkel P2', risk: 1000, platform: 'MT5', format: 'levels' }
+];
+
+const PIP_VALUE_PER_LOT = 10; // GBPUSD standard lot
+const RR = 2.5;
+
+function setDirection(d) {
+  direction = d;
+  document.getElementById('btnBuy').className = d === 'buy' ? 'active-buy' : '';
+  document.getElementById('btnSell').className = d === 'sell' ? 'active-sell' : '';
+}
+
+function calculate() {
+  const entry = parseFloat(document.getElementById('entry').value);
+  const sl = parseFloat(document.getElementById('sl').value);
+  if (!entry || !sl || !direction) return;
+
+  const slPips = Math.abs(entry - sl) / 0.0001;
+  const tpPips = slPips * RR;
+  const tpPrice = direction === 'buy' ? entry + tpPips * 0.0001 : entry - tpPips * 0.0001;
+
+  let html = '';
+  ACCOUNTS.forEach(acc => {
+    const lots = (acc.risk / (slPips * PIP_VALUE_PER_LOT)).toFixed(2);
+    const dirClass = direction === 'buy' ? 'direction-buy' : 'direction-sell';
+    html += `<div class="account-card ${dirClass}">`;
+    html += `<h2>${acc.name}</h2>`;
+    html += `<div class="risk-info">${acc.platform} · $${acc.risk} risk · ${direction.toUpperCase()}</div>`;
+    html += field('Lots', lots);
+    html += field('Entry', entry.toFixed(5));
+    if (acc.format === 'pips') {
+      html += field('SL (pips)', slPips.toFixed(1));
+      html += field('TP (pips)', tpPips.toFixed(1));
+    } else {
+      html += field('SL Level', sl.toFixed(5));
+      html += field('TP Level', tpPrice.toFixed(5));
+    }
+    html += `</div>`;
+  });
+
+  document.getElementById('results').innerHTML = html;
+  document.getElementById('results').classList.remove('hidden');
+  document.getElementById('shareSection').classList.remove('hidden');
+}
+
+function field(label, value) {
+  return `<div class="field-row">
+    <span class="field-label">${label}</span>
+    <span class="field-value" onclick="copyVal(this, '${value}')">${value}</span>
+  </div>`;
+}
+
+function copyVal(el, val) {
+  navigator.clipboard.writeText(val);
+  el.classList.add('copied');
+  showToast('Copied: ' + val);
+  setTimeout(() => el.classList.remove('copied'), 600);
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 1200);
+}
+
+function shareSignal() {
+  const entry = document.getElementById('entry').value;
+  const sl = document.getElementById('sl').value;
+  const url = `${location.origin}${location.pathname}?e=${entry}&sl=${sl}&d=${direction}`;
+  navigator.clipboard.writeText(url);
+  showToast('Link copied!');
+}
+
+// Load from URL params
+const params = new URLSearchParams(location.search);
+if (params.get('e') && params.get('sl') && params.get('d')) {
+  document.getElementById('entry').value = params.get('e');
+  document.getElementById('sl').value = params.get('sl');
+  setDirection(params.get('d'));
+  calculate();
+}
+</script>
+</body>
+</html>
