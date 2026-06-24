@@ -5,82 +5,171 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#1a1a2e">
+<meta name="theme-color" content="#0d0d0d">
 <link rel="manifest" href="manifest.json">
 <title>Trade Signal</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background: #1a1a2e;
-  color: #e0e0e0;
+  background: #0d0d0d;
+  color: #f0f0f0;
   min-height: 100vh;
   padding: 16px;
+  padding-bottom: 80px;
 }
-h1 { font-size: 1.3rem; text-align: center; margin-bottom: 16px; color: #00d4aa; }
+h1 { font-size: 1.3rem; text-align: center; margin-bottom: 16px; color: #fff; }
+
+/* Input */
 .input-section { margin-bottom: 20px; }
-label { display: block; font-size: 0.85rem; color: #888; margin-bottom: 4px; }
-input, select {
-  width: 100%; padding: 14px; font-size: 1.1rem;
-  background: #16213e; border: 1px solid #333; border-radius: 8px;
+label { display: block; font-size: 0.85rem; color: #aaa; margin-bottom: 4px; font-weight: 600; }
+input {
+  width: 100%; padding: 14px; font-size: 1.2rem;
+  background: #1a1a1a; border: 2px solid #333; border-radius: 8px;
   color: #fff; margin-bottom: 12px; -webkit-appearance: none;
 }
-select { padding-right: 40px; }
+input:focus { border-color: #fff; outline: none; }
+input.input-error { border-color: #ff4444; }
+.error-msg {
+  color: #ff4444; font-size: 0.8rem; font-weight: 600;
+  margin: -8px 0 12px; display: none;
+}
+.error-msg.show { display: block; }
+
+/* Buttons */
 .btn {
-  width: 100%; padding: 14px; font-size: 1rem; font-weight: 600;
+  width: 100%; padding: 14px; font-size: 1rem; font-weight: 700;
   border: none; border-radius: 8px; cursor: pointer;
 }
-.btn-primary { background: #00d4aa; color: #1a1a2e; margin-bottom: 10px; }
-.btn-share { background: #0f3460; color: #00d4aa; }
-.account-card {
-  background: #16213e; border-radius: 10px; padding: 14px;
-  margin-bottom: 14px; border-left: 4px solid #00d4aa;
+.btn-primary { background: #fff; color: #000; margin-bottom: 10px; }
+.btn-share { background: #222; color: #fff; border: 1px solid #444; margin-bottom: 10px; }
+.btn-confirm-share { background: #fff; color: #000; }
+
+/* Direction */
+.direction-toggle { display: flex; gap: 8px; margin-bottom: 12px; }
+.direction-toggle button {
+  flex: 1; padding: 14px; font-size: 1.1rem; font-weight: 700;
+  border: 2px solid #333; border-radius: 8px; background: #1a1a1a;
+  color: #666; cursor: pointer; transition: all 0.15s;
 }
-.account-card h2 { font-size: 1rem; margin-bottom: 4px; color: #00d4aa; }
-.account-card .risk-info { font-size: 0.75rem; color: #666; margin-bottom: 10px; }
+.direction-toggle button.active-buy { border-color: #00e676; color: #00e676; background: #002910; }
+.direction-toggle button.active-sell { border-color: #ff5252; color: #ff5252; background: #290000; }
+
+/* Signal summary */
+.signal-summary {
+  background: #1a1a1a; border-radius: 8px; padding: 12px;
+  margin-bottom: 16px; border: 1px solid #333;
+}
+.direction-badge {
+  display: inline-block; padding: 3px 10px; border-radius: 4px;
+  font-weight: 700; font-size: 0.85rem; margin-right: 8px;
+}
+.badge-buy { background: #00e676; color: #000; }
+.badge-sell { background: #ff5252; color: #fff; }
+.summary-details { margin-top: 6px; font-size: 0.85rem; color: #aaa; }
+.summary-details span { color: #fff; font-weight: 600; }
+
+/* Sticky step counter */
+.step-counter {
+  position: sticky; top: 0; z-index: 50;
+  background: #0d0d0d; padding: 10px 0; margin-bottom: 12px;
+  border-bottom: 1px solid #222; text-align: center;
+  font-size: 0.9rem; font-weight: 700; color: #ffcc00;
+}
+
+/* Account cards */
+.account-card {
+  background: #141414; border-radius: 10px; padding: 14px;
+  margin-bottom: 14px; border-left: 5px solid #555;
+  transition: opacity 0.3s;
+}
+.account-card h2 { font-size: 1.05rem; margin-bottom: 2px; color: #fff; }
+.account-card .risk-info { font-size: 0.8rem; color: #888; margin-bottom: 10px; }
+.card-active.direction-buy { border-left-color: #00e676; }
+.card-active.direction-buy h2 { color: #00e676; }
+.card-active.direction-sell { border-left-color: #ff5252; }
+.card-active.direction-sell h2 { color: #ff5252; }
+.card-done { opacity: 0.3; }
+
+/* Fields */
 .field-row {
   display: flex; justify-content: space-between; align-items: center;
   padding: 10px 0; border-bottom: 1px solid #222;
+  transition: opacity 0.3s;
 }
 .field-row:last-child { border-bottom: none; }
-.field-label { font-size: 0.8rem; color: #888; }
+.field-row.field-done { opacity: 0.35; }
+.field-label { font-size: 0.85rem; color: #aaa; font-weight: 500; }
 .field-value {
-  font-size: 1.1rem; font-weight: 600; font-family: 'SF Mono', monospace;
-  padding: 6px 14px; background: #0f3460; border-radius: 6px;
-  cursor: pointer; transition: background 0.15s; min-width: 80px; text-align: center;
+  font-size: 1.2rem; font-weight: 700; font-family: 'SF Mono', 'Menlo', monospace;
+  padding: 8px 16px; background: #2a2a2a; border-radius: 6px;
+  cursor: pointer; transition: all 0.15s; min-width: 90px; text-align: center;
+  border: 2px solid transparent; color: #fff;
 }
-.field-value:active { background: #00d4aa; color: #1a1a2e; }
-.field-value.copied { background: #00d4aa; color: #1a1a2e; }
-.platform-tag {
-  font-size: 0.65rem; background: #333; padding: 2px 6px;
-  border-radius: 4px; margin-left: 6px; vertical-align: middle;
+.field-value:active { background: #fff; color: #000; }
+.field-value.copied { background: #fff; color: #000; border-color: #fff; }
+.field-value.next-field { border-color: #ffcc00; background: #2a2200; }
+
+/* Progress */
+.progress-bar { display: flex; gap: 4px; margin-bottom: 12px; }
+.progress-step {
+  flex: 1; height: 5px; border-radius: 3px; background: #222;
+  transition: background 0.2s;
 }
-.direction-buy { border-left-color: #00d4aa; }
-.direction-sell { border-left-color: #ff6b6b; }
-.direction-sell h2 { color: #ff6b6b; }
-.hidden { display: none; }
+.progress-step.done { background: #00e676; }
+.progress-step.active { background: #ffcc00; }
+
+/* Confirm modal */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 200; padding: 20px;
+}
+.modal-box {
+  background: #1a1a1a; border-radius: 12px; padding: 24px;
+  max-width: 340px; width: 100%; text-align: center;
+}
+.modal-box p { margin-bottom: 16px; font-size: 1rem; color: #ccc; }
+.modal-actions { display: flex; gap: 10px; }
+.modal-actions button {
+  flex: 1; padding: 12px; font-size: 1rem; font-weight: 700;
+  border: none; border-radius: 8px; cursor: pointer;
+}
+.modal-cancel { background: #333; color: #fff; }
+.modal-confirm { background: #ff5252; color: #fff; }
+
+/* Sender confirm screen */
+.confirm-screen {
+  background: #1a1a1a; border-radius: 10px; padding: 16px;
+  margin-bottom: 14px; border: 2px solid #333;
+}
+.confirm-screen h3 { color: #fff; margin-bottom: 10px; font-size: 1rem; }
+.confirm-detail { font-size: 0.95rem; color: #aaa; margin-bottom: 6px; }
+.confirm-detail span { color: #fff; font-weight: 600; }
+
+/* Reset */
+.reset-btn {
+  display: block; margin: 16px auto 0; padding: 10px 24px;
+  background: none; border: 1px solid #444; border-radius: 6px;
+  color: #888; font-size: 0.85rem; cursor: pointer;
+}
+
+/* Toast */
 .toast {
   position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-  background: #00d4aa; color: #1a1a2e; padding: 10px 20px;
-  border-radius: 20px; font-size: 0.85rem; font-weight: 600;
-  opacity: 0; transition: opacity 0.2s; pointer-events: none;
+  background: #fff; color: #000; padding: 10px 20px;
+  border-radius: 20px; font-size: 0.85rem; font-weight: 700;
+  opacity: 0; transition: opacity 0.2s; pointer-events: none; z-index: 100;
 }
 .toast.show { opacity: 1; }
-.direction-toggle {
-  display: flex; gap: 8px; margin-bottom: 12px;
-}
-.direction-toggle button {
-  flex: 1; padding: 12px; font-size: 1rem; font-weight: 600;
-  border: 2px solid #333; border-radius: 8px; background: #16213e;
-  color: #888; cursor: pointer;
-}
-.direction-toggle button.active-buy { border-color: #00d4aa; color: #00d4aa; }
-.direction-toggle button.active-sell { border-color: #ff6b6b; color: #ff6b6b; }
+.toast.error { background: #ff4444; color: #fff; }
+
+.hidden { display: none; }
 </style>
 </head>
 <body>
 
-<h1>📊 Trade Signal Calculator</h1>
+<h1>Trade Signal</h1>
 
 <div id="inputSection" class="input-section">
   <div class="direction-toggle">
@@ -91,86 +180,340 @@ select { padding-right: 40px; }
   <input type="number" id="entry" step="0.00001" placeholder="e.g. 1.26450" inputmode="decimal">
   <label>Stop Loss Price</label>
   <input type="number" id="sl" step="0.00001" placeholder="e.g. 1.26200" inputmode="decimal">
+  <div class="error-msg" id="errorMsg"></div>
   <button class="btn btn-primary" onclick="calculate()">Calculate</button>
 </div>
 
+<div id="confirmScreen" class="hidden"></div>
+<div id="signalSummary" class="hidden"></div>
+<div id="stepCounter" class="step-counter hidden"></div>
+<div id="progressSection" class="hidden">
+  <div class="progress-bar" id="progressBar"></div>
+</div>
 <div id="results" class="hidden"></div>
 <div id="shareSection" class="hidden">
   <button class="btn btn-share" onclick="shareSignal()">📤 Share Signal Link</button>
+  <button class="reset-btn" onclick="confirmReset()">New Signal</button>
 </div>
+<div id="modalOverlay" class="hidden"></div>
 
-<div class="toast" id="toast">Copied!</div>
+<div class="toast" id="toast"></div>
 
 <script>
 let direction = null;
+let copySequence = [];
+let currentStep = 0;
+let calculated = false;
 
 const ACCOUNTS = [
   { name: 'FTMO 150K', risk: 875, platform: 'cTrader', format: 'pips' },
   { name: '5ers 100K', risk: 700, platform: 'cTrader', format: 'pips' },
   { name: 'QuantTekkel P2', risk: 1000, platform: 'MT5', format: 'levels' }
 ];
-
-const PIP_VALUE_PER_LOT = 10; // GBPUSD standard lot
+const PIP_VALUE = 10;
 const RR = 2.5;
+const MIN_PRICE = 1.00000;
+const MAX_PRICE = 1.42000;
+const MIN_SL_PIPS = 7;
+const MAX_SL_PIPS = 40;
 
 function setDirection(d) {
   direction = d;
   document.getElementById('btnBuy').className = d === 'buy' ? 'active-buy' : '';
   document.getElementById('btnSell').className = d === 'sell' ? 'active-sell' : '';
+  clearError();
+}
+
+function showError(msg) {
+  const el = document.getElementById('errorMsg');
+  el.textContent = msg;
+  el.classList.add('show');
+  showToast(msg, true);
+}
+
+function clearError() {
+  document.getElementById('errorMsg').classList.remove('show');
+  document.getElementById('entry').classList.remove('input-error');
+  document.getElementById('sl').classList.remove('input-error');
+}
+
+function formatPrice(val) {
+  return parseFloat(val).toFixed(5);
+}
+
+function validate(entry, sl) {
+  clearError();
+  if (!direction) { showError('Select BUY or SELL'); return false; }
+  if (!entry || isNaN(entry)) {
+    document.getElementById('entry').classList.add('input-error');
+    showError('Enter a valid entry price'); return false;
+  }
+  if (!sl || isNaN(sl)) {
+    document.getElementById('sl').classList.add('input-error');
+    showError('Enter a valid stop loss price'); return false;
+  }
+  if (entry < MIN_PRICE || entry > MAX_PRICE) {
+    document.getElementById('entry').classList.add('input-error');
+    showError('Entry must be between ' + MIN_PRICE.toFixed(5) + ' and ' + MAX_PRICE.toFixed(5));
+    return false;
+  }
+  if (sl < MIN_PRICE || sl > MAX_PRICE) {
+    document.getElementById('sl').classList.add('input-error');
+    showError('SL must be between ' + MIN_PRICE.toFixed(5) + ' and ' + MAX_PRICE.toFixed(5));
+    return false;
+  }
+  if (entry === sl) {
+    document.getElementById('sl').classList.add('input-error');
+    showError('Entry and SL cannot be the same'); return false;
+  }
+  if (direction === 'buy' && sl >= entry) {
+    document.getElementById('sl').classList.add('input-error');
+    showError('BUY: Stop loss must be BELOW entry'); return false;
+  }
+  if (direction === 'sell' && sl <= entry) {
+    document.getElementById('sl').classList.add('input-error');
+    showError('SELL: Stop loss must be ABOVE entry'); return false;
+  }
+  const pips = Math.round(Math.abs(entry - sl) / 0.0001 * 10) / 10;
+  if (pips < MIN_SL_PIPS) {
+    document.getElementById('sl').classList.add('input-error');
+    showError('SL too tight: ' + pips.toFixed(1) + ' pips (min ' + MIN_SL_PIPS + ')');
+    return false;
+  }
+  if (pips > MAX_SL_PIPS) {
+    document.getElementById('sl').classList.add('input-error');
+    showError('SL too wide: ' + pips.toFixed(1) + ' pips (max ' + MAX_SL_PIPS + ')');
+    return false;
+  }
+  return true;
 }
 
 function calculate() {
   const entry = parseFloat(document.getElementById('entry').value);
   const sl = parseFloat(document.getElementById('sl').value);
-  if (!entry || !sl || !direction) return;
+  if (!validate(entry, sl)) return;
 
+  // Check if loaded from URL (receiver) — skip confirm, show results directly
+  const fromUrl = new URLSearchParams(location.search).get('e');
+  if (!fromUrl && !calculated) {
+    showConfirmScreen(entry, sl);
+    return;
+  }
+  buildResults(entry, sl);
+}
+
+function showConfirmScreen(entry, sl) {
   const slPips = Math.abs(entry - sl) / 0.0001;
   const tpPips = slPips * RR;
   const tpPrice = direction === 'buy' ? entry + tpPips * 0.0001 : entry - tpPips * 0.0001;
+  const badgeClass = direction === 'buy' ? 'badge-buy' : 'badge-sell';
 
+  document.getElementById('confirmScreen').innerHTML = `
+    <div class="confirm-screen">
+      <h3>Confirm Signal</h3>
+      <div class="confirm-detail"><span class="direction-badge ${badgeClass}">${direction.toUpperCase()}</span> GBPUSD</div>
+      <div class="confirm-detail">Entry: <span>${formatPrice(entry)}</span></div>
+      <div class="confirm-detail">Stop Loss: <span>${formatPrice(sl)}</span> (${slPips.toFixed(1)} pips)</div>
+      <div class="confirm-detail">Take Profit: <span>${formatPrice(tpPrice)}</span> (${tpPips.toFixed(1)} pips)</div>
+      <div class="confirm-detail">Risk:Reward: <span>1:${RR}</span></div>
+      <br>
+      <button class="btn btn-confirm-share" onclick="confirmCalculate()">✓ Confirm & Calculate</button>
+    </div>`;
+  document.getElementById('confirmScreen').classList.remove('hidden');
+  document.getElementById('inputSection').classList.add('hidden');
+}
+
+function confirmCalculate() {
+  calculated = true;
+  const entry = parseFloat(document.getElementById('entry').value);
+  const sl = parseFloat(document.getElementById('sl').value);
+  document.getElementById('confirmScreen').classList.add('hidden');
+  buildResults(entry, sl);
+}
+
+function buildResults(entry, sl) {
+  const slPips = Math.abs(entry - sl) / 0.0001;
+  const tpPips = slPips * RR;
+  const tpPrice = direction === 'buy' ? entry + tpPips * 0.0001 : entry - tpPips * 0.0001;
+  const badgeClass = direction === 'buy' ? 'badge-buy' : 'badge-sell';
+
+  // Summary
+  document.getElementById('signalSummary').innerHTML = `
+    <div class="signal-summary">
+      <span class="direction-badge ${badgeClass}">${direction.toUpperCase()}</span> GBPUSD
+      <div class="summary-details">
+        Entry <span>${formatPrice(entry)}</span> · SL <span>${formatPrice(sl)}</span> · TP <span>${formatPrice(tpPrice)}</span> · <span>${slPips.toFixed(1)}p → ${tpPips.toFixed(1)}p</span>
+      </div>
+    </div>`;
+  document.getElementById('signalSummary').classList.remove('hidden');
+  document.getElementById('inputSection').classList.add('hidden');
+
+  // Build sequence and cards
+  copySequence = [];
   let html = '';
-  ACCOUNTS.forEach(acc => {
-    const lots = (acc.risk / (slPips * PIP_VALUE_PER_LOT)).toFixed(2);
-    const dirClass = direction === 'buy' ? 'direction-buy' : 'direction-sell';
-    html += `<div class="account-card ${dirClass}">`;
+  const dirClass = direction === 'buy' ? 'direction-buy' : 'direction-sell';
+
+  ACCOUNTS.forEach((acc, ai) => {
+    const lots = (acc.risk / (slPips * PIP_VALUE)).toFixed(2);
+    html += `<div class="account-card" id="card-${ai}">`;
     html += `<h2>${acc.name}</h2>`;
-    html += `<div class="risk-info">${acc.platform} · $${acc.risk} risk · ${direction.toUpperCase()}</div>`;
-    html += field('Lots', lots);
-    html += field('Entry', entry.toFixed(5));
+    html += `<div class="risk-info">${acc.platform} · $${acc.risk} risk</div>`;
+
+    const fields = [{ label: 'Lots', value: lots }];
+    fields.push({ label: 'Entry', value: formatPrice(entry) });
     if (acc.format === 'pips') {
-      html += field('SL (pips)', slPips.toFixed(1));
-      html += field('TP (pips)', tpPips.toFixed(1));
+      fields.push({ label: 'SL (pips)', value: slPips.toFixed(1) });
+      fields.push({ label: 'TP (pips)', value: tpPips.toFixed(1) });
     } else {
-      html += field('SL Level', sl.toFixed(5));
-      html += field('TP Level', tpPrice.toFixed(5));
+      fields.push({ label: 'SL Level', value: formatPrice(sl) });
+      fields.push({ label: 'TP Level', value: formatPrice(tpPrice) });
     }
+
+    fields.forEach((f) => {
+      const idx = copySequence.length;
+      copySequence.push({ account: ai, value: f.value, label: f.label, accName: acc.name });
+      html += `<div class="field-row" id="row-${idx}">
+        <span class="field-label">${f.label}</span>
+        <span class="field-value" id="val-${idx}" onclick="copyStep(${idx})">${f.value}</span>
+      </div>`;
+    });
     html += `</div>`;
   });
 
   document.getElementById('results').innerHTML = html;
   document.getElementById('results').classList.remove('hidden');
   document.getElementById('shareSection').classList.remove('hidden');
+
+  // Progress bar
+  let progHtml = '';
+  for (let i = 0; i < copySequence.length; i++) {
+    progHtml += `<div class="progress-step" id="prog-${i}"></div>`;
+  }
+  document.getElementById('progressBar').innerHTML = progHtml;
+  document.getElementById('progressSection').classList.remove('hidden');
+  document.getElementById('stepCounter').classList.remove('hidden');
+
+  currentStep = 0;
+  highlightNext();
 }
 
-function field(label, value) {
-  return `<div class="field-row">
-    <span class="field-label">${label}</span>
-    <span class="field-value" onclick="copyVal(this, '${value}')">${value}</span>
-  </div>`;
+function highlightNext() {
+  // Reset all
+  document.querySelectorAll('.field-value').forEach(el => el.classList.remove('next-field'));
+  document.querySelectorAll('.field-row').forEach(el => el.classList.remove('field-done'));
+  document.querySelectorAll('.account-card').forEach(el => {
+    el.classList.remove('card-done', 'card-active', 'direction-buy', 'direction-sell');
+  });
+  document.querySelectorAll('.progress-step').forEach(el => el.classList.remove('active', 'done'));
+
+  const dirClass = direction === 'buy' ? 'direction-buy' : 'direction-sell';
+
+  // Mark done
+  for (let i = 0; i < currentStep; i++) {
+    document.getElementById('row-' + i).classList.add('field-done');
+    document.getElementById('prog-' + i).classList.add('done');
+  }
+
+  if (currentStep < copySequence.length) {
+    const cur = copySequence[currentStep];
+    // Dim completed cards
+    for (let i = 0; i < cur.account; i++) {
+      document.getElementById('card-' + i).classList.add('card-done');
+    }
+    // Active card
+    document.getElementById('card-' + cur.account).classList.add('card-active', dirClass);
+    // Highlight field
+    document.getElementById('val-' + currentStep).classList.add('next-field');
+    document.getElementById('prog-' + currentStep).classList.add('active');
+    // Step counter
+    const fieldsInAccount = copySequence.filter(s => s.account === cur.account).length;
+    const fieldIdx = copySequence.slice(0, currentStep).filter(s => s.account === cur.account).length + 1;
+    document.getElementById('stepCounter').textContent =
+      `${cur.label} · Field ${fieldIdx} of ${fieldsInAccount} · ${cur.accName}`;
+  } else {
+    // All done
+    ACCOUNTS.forEach((_, i) => document.getElementById('card-' + i).classList.add('card-done'));
+    document.getElementById('stepCounter').textContent = '✓ All fields copied';
+    showToast('✓ All accounts done', false);
+    vibrate([50, 50, 50]);
+  }
 }
 
-function copyVal(el, val) {
+function copyStep(idx) {
+  const val = copySequence[idx].value;
   navigator.clipboard.writeText(val);
+  const el = document.getElementById('val-' + idx);
   el.classList.add('copied');
-  showToast('Copied: ' + val);
-  setTimeout(() => el.classList.remove('copied'), 600);
+  setTimeout(() => el.classList.remove('copied'), 500);
+
+  const prevAccount = currentStep < copySequence.length ? copySequence[currentStep].account : -1;
+
+  if (idx >= currentStep) {
+    currentStep = idx + 1;
+  }
+
+  highlightNext();
+
+  // Check if we moved to a new card
+  const newAccount = currentStep < copySequence.length ? copySequence[currentStep].account : -1;
+  if (newAccount !== prevAccount && prevAccount !== -1) {
+    vibrate([50, 30, 50]);
+    // Auto-scroll to next card
+    if (newAccount >= 0) {
+      setTimeout(() => {
+        document.getElementById('card-' + newAccount).scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+  } else {
+    vibrate([50]);
+  }
+
+  showToast('Copied: ' + val, false);
 }
 
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 1200);
+function vibrate(pattern) {
+  if (navigator.vibrate) navigator.vibrate(pattern);
+}
+
+function confirmReset() {
+  document.getElementById('modalOverlay').innerHTML = `
+    <div class="modal-overlay" onclick="closeModal(event)">
+      <div class="modal-box">
+        <p>Clear current signal and start new?</p>
+        <div class="modal-actions">
+          <button class="modal-cancel" onclick="closeModal()">Cancel</button>
+          <button class="modal-confirm" onclick="resetAll()">Reset</button>
+        </div>
+      </div>
+    </div>`;
+  document.getElementById('modalOverlay').classList.remove('hidden');
+}
+
+function closeModal(e) {
+  if (e && e.target !== e.currentTarget) return;
+  document.getElementById('modalOverlay').classList.add('hidden');
+}
+
+function resetAll() {
+  direction = null;
+  currentStep = 0;
+  copySequence = [];
+  calculated = false;
+  document.getElementById('entry').value = '';
+  document.getElementById('sl').value = '';
+  document.getElementById('btnBuy').className = '';
+  document.getElementById('btnSell').className = '';
+  document.getElementById('results').classList.add('hidden');
+  document.getElementById('shareSection').classList.add('hidden');
+  document.getElementById('signalSummary').classList.add('hidden');
+  document.getElementById('progressSection').classList.add('hidden');
+  document.getElementById('stepCounter').classList.add('hidden');
+  document.getElementById('confirmScreen').classList.add('hidden');
+  document.getElementById('inputSection').classList.remove('hidden');
+  document.getElementById('modalOverlay').classList.add('hidden');
+  clearError();
+  // Clear URL params
+  history.replaceState(null, '', location.pathname);
 }
 
 function shareSignal() {
@@ -178,7 +521,15 @@ function shareSignal() {
   const sl = document.getElementById('sl').value;
   const url = `${location.origin}${location.pathname}?e=${entry}&sl=${sl}&d=${direction}`;
   navigator.clipboard.writeText(url);
-  showToast('Link copied!');
+  showToast('Link copied!', false);
+  vibrate([50]);
+}
+
+function showToast(msg, isError) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isError ? ' error' : '');
+  setTimeout(() => t.classList.remove('show'), 1500);
 }
 
 // Load from URL params
@@ -187,6 +538,7 @@ if (params.get('e') && params.get('sl') && params.get('d')) {
   document.getElementById('entry').value = params.get('e');
   document.getElementById('sl').value = params.get('sl');
   setDirection(params.get('d'));
+  calculated = true; // skip confirm for receiver
   calculate();
 }
 </script>
