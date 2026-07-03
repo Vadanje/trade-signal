@@ -20,6 +20,15 @@ body {
 }
 h1 { font-size: 1.3rem; text-align: center; margin-bottom: 16px; color: #fff; }
 
+/* Flash overlay */
+.flash-overlay {
+  position: fixed; inset: 0; z-index: 300;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.15s ease-out;
+}
+.flash-overlay.flash-buy { background: radial-gradient(ellipse at center, rgba(0,230,118,0.25) 0%, transparent 70%); opacity: 1; }
+.flash-overlay.flash-sell { background: radial-gradient(ellipse at center, rgba(255,82,82,0.25) 0%, transparent 70%); opacity: 1; }
+
 /* Input */
 .input-section { margin-bottom: 20px; }
 label { display: block; font-size: 0.85rem; color: #aaa; margin-bottom: 4px; font-weight: 600; }
@@ -46,14 +55,23 @@ input.input-error { border-color: #ff4444; }
 .btn-confirm-share { background: #fff; color: #000; }
 
 /* Direction */
-.direction-toggle { display: flex; gap: 8px; margin-bottom: 12px; }
-.direction-toggle button {
-  flex: 1; padding: 14px; font-size: 1.1rem; font-weight: 700;
-  border: 2px solid #333; border-radius: 8px; background: #1a1a1a;
-  color: #666; cursor: pointer; transition: all 0.15s;
+.direction-toggle {
+  display: flex; gap: 10px; margin-bottom: 16px;
 }
-.direction-toggle button.active-buy { border-color: #00e676; color: #00e676; background: #002910; }
-.direction-toggle button.active-sell { border-color: #ff5252; color: #ff5252; background: #290000; }
+.direction-toggle button {
+  flex: 1; padding: 28px 14px; font-size: 1.6rem; font-weight: 800;
+  border: 3px solid #333; border-radius: 12px; background: #1a1a1a;
+  color: #666; cursor: pointer; transition: all 0.15s;
+  letter-spacing: 0.05em;
+}
+.direction-toggle button.active-buy {
+  border-color: #00e676; color: #00e676; background: #002910;
+  box-shadow: 0 0 20px rgba(0,230,118,0.15);
+}
+.direction-toggle button.active-sell {
+  border-color: #ff5252; color: #ff5252; background: #290000;
+  box-shadow: 0 0 20px rgba(255,82,82,0.15);
+}
 
 /* Signal summary */
 .signal-summary {
@@ -169,6 +187,8 @@ input.input-error { border-color: #ff4444; }
 </head>
 <body>
 
+<div class="flash-overlay" id="flashOverlay"></div>
+
 <h1>Trade Signal</h1>
 
 <div id="inputSection" class="input-section">
@@ -207,6 +227,7 @@ let calculated = false;
 
 const ACCOUNTS = [
   { name: 'FTMO 150K', risk: 875, platform: 'cTrader', format: 'pips' },
+  { name: 'FTMO 100K P1', risk: 1000, platform: 'cTrader', format: 'pips' },
   { name: '5ers 100K', risk: 700, platform: 'cTrader', format: 'pips' },
   { name: 'QuantTekkel P2', risk: 1000, platform: 'MT5', format: 'levels' }
 ];
@@ -222,6 +243,15 @@ function setDirection(d) {
   document.getElementById('btnBuy').className = d === 'buy' ? 'active-buy' : '';
   document.getElementById('btnSell').className = d === 'sell' ? 'active-sell' : '';
   clearError();
+  triggerFlash(d);
+}
+
+function triggerFlash(d) {
+  const el = document.getElementById('flashOverlay');
+  el.className = 'flash-overlay';
+  void el.offsetWidth;
+  el.classList.add(d === 'buy' ? 'flash-buy' : 'flash-sell');
+  setTimeout(() => { el.className = 'flash-overlay'; }, 300);
 }
 
 function showError(msg) {
@@ -293,7 +323,6 @@ function calculate() {
   const sl = parseFloat(document.getElementById('sl').value);
   if (!validate(entry, sl)) return;
 
-  // Check if loaded from URL (receiver) — skip confirm, show results directly
   const fromUrl = new URLSearchParams(location.search).get('e');
   if (!fromUrl && !calculated) {
     showConfirmScreen(entry, sl);
@@ -351,7 +380,6 @@ function buildResults(entry, sl) {
   // Build sequence and cards
   copySequence = [];
   let html = '';
-  const dirClass = direction === 'buy' ? 'direction-buy' : 'direction-sell';
 
   ACCOUNTS.forEach((acc, ai) => {
     const lots = (acc.risk / (slPips * PIP_VALUE)).toFixed(2);
@@ -362,7 +390,7 @@ function buildResults(entry, sl) {
     const fields = [{ label: 'Lots', value: lots }];
     fields.push({ label: 'Entry', value: formatPrice(entry) });
     if (acc.format === 'pips') {
-      fields.push({ label: 'SL (pips)', value: slPips.toFixed(1) });
+      fields.push({ label: 'SL (pips)', value: '-' + slPips.toFixed(1) });
       fields.push({ label: 'TP (pips)', value: tpPips.toFixed(1) });
     } else {
       fields.push({ label: 'SL Level', value: formatPrice(sl) });
@@ -398,7 +426,6 @@ function buildResults(entry, sl) {
 }
 
 function highlightNext() {
-  // Reset all
   document.querySelectorAll('.field-value').forEach(el => el.classList.remove('next-field'));
   document.querySelectorAll('.field-row').forEach(el => el.classList.remove('field-done'));
   document.querySelectorAll('.account-card').forEach(el => {
@@ -408,7 +435,6 @@ function highlightNext() {
 
   const dirClass = direction === 'buy' ? 'direction-buy' : 'direction-sell';
 
-  // Mark done
   for (let i = 0; i < currentStep; i++) {
     document.getElementById('row-' + i).classList.add('field-done');
     document.getElementById('prog-' + i).classList.add('done');
@@ -416,22 +442,17 @@ function highlightNext() {
 
   if (currentStep < copySequence.length) {
     const cur = copySequence[currentStep];
-    // Dim completed cards
     for (let i = 0; i < cur.account; i++) {
       document.getElementById('card-' + i).classList.add('card-done');
     }
-    // Active card
     document.getElementById('card-' + cur.account).classList.add('card-active', dirClass);
-    // Highlight field
     document.getElementById('val-' + currentStep).classList.add('next-field');
     document.getElementById('prog-' + currentStep).classList.add('active');
-    // Step counter
     const fieldsInAccount = copySequence.filter(s => s.account === cur.account).length;
     const fieldIdx = copySequence.slice(0, currentStep).filter(s => s.account === cur.account).length + 1;
     document.getElementById('stepCounter').textContent =
       `${cur.label} · Field ${fieldIdx} of ${fieldsInAccount} · ${cur.accName}`;
   } else {
-    // All done
     ACCOUNTS.forEach((_, i) => document.getElementById('card-' + i).classList.add('card-done'));
     document.getElementById('stepCounter').textContent = '✓ All fields copied';
     showToast('✓ All accounts done', false);
@@ -454,11 +475,9 @@ function copyStep(idx) {
 
   highlightNext();
 
-  // Check if we moved to a new card
   const newAccount = currentStep < copySequence.length ? copySequence[currentStep].account : -1;
   if (newAccount !== prevAccount && prevAccount !== -1) {
     vibrate([50, 30, 50]);
-    // Auto-scroll to next card
     if (newAccount >= 0) {
       setTimeout(() => {
         document.getElementById('card-' + newAccount).scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -512,7 +531,6 @@ function resetAll() {
   document.getElementById('inputSection').classList.remove('hidden');
   document.getElementById('modalOverlay').classList.add('hidden');
   clearError();
-  // Clear URL params
   history.replaceState(null, '', location.pathname);
 }
 
@@ -538,7 +556,7 @@ if (params.get('e') && params.get('sl') && params.get('d')) {
   document.getElementById('entry').value = params.get('e');
   document.getElementById('sl').value = params.get('sl');
   setDirection(params.get('d'));
-  calculated = true; // skip confirm for receiver
+  calculated = true;
   calculate();
 }
 </script>
