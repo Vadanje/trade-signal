@@ -140,38 +140,28 @@ function markPositionOpen() {
   if (!window._lastSignal) return;
   const sig = window._lastSignal;
   const now = Date.now();
-  // Mark all accounts as open for this signal
-  ACCOUNTS.forEach(acc => {
-    openPositions.push({
-      id: now + '-' + acc.name,
-      account: acc.name,
-      direction: sig.direction,
-      entry: sig.entry,
-      sl: sig.sl,
-      tp: sig.tp,
-      mode: sig.mode,
-      openedAt: now,
-      newsRule: acc.newsRule,
-      phase: acc.phase
-    });
+  const signalId = now.toString();
+  // Store as a single signal with all accounts
+  openPositions.push({
+    id: signalId,
+    direction: sig.direction,
+    entry: sig.entry,
+    sl: sig.sl,
+    tp: sig.tp,
+    mode: sig.mode,
+    openedAt: now,
+    accounts: ACCOUNTS.map(acc => ({ name: acc.name, newsRule: acc.newsRule, phase: acc.phase }))
   });
   localStorage.setItem('openPositions', JSON.stringify(openPositions));
   renderPositionTracker();
-  showToast('Positions marked open', false);
+  showToast('Position open — all accounts', false);
 }
 
 function closePosition(id) {
   openPositions = openPositions.filter(p => p.id !== id);
   localStorage.setItem('openPositions', JSON.stringify(openPositions));
   renderPositionTracker();
-  showToast('Position closed', false);
-}
-
-function closeAllPositions() {
-  openPositions = [];
-  localStorage.setItem('openPositions', JSON.stringify(openPositions));
-  renderPositionTracker();
-  showToast('All positions closed', false);
+  showToast('Position closed — all accounts', false);
 }
 
 function renderPositionTracker() {
@@ -185,13 +175,14 @@ function renderPositionTracker() {
   openPositions.forEach(p => {
     const badge = p.direction === 'buy' ? 'badge-buy' : 'badge-sell';
     const elapsed = timeSince(p.openedAt);
+    const accNames = p.accounts.map(a => a.name).join(', ');
     html += `<div class="position-account">
-      <div class="acc-name"><span class="direction-badge ${badge}">${p.direction.toUpperCase()}</span> ${p.account}</div>
+      <div class="acc-name"><span class="direction-badge ${badge}">${p.direction.toUpperCase()}</span> GBPUSD · ${p.mode.toUpperCase()}</div>
       <div class="acc-detail">SL: ${formatPrice(p.sl)} · TP: ${formatPrice(p.tp)} · Open ${elapsed}</div>
-      <button class="close-position-btn" onclick="closePosition('${p.id}')">✕ Close</button>
+      <div class="acc-detail">${accNames}</div>
+      <button class="close-position-btn" onclick="closePosition('${p.id}')">✕ Close All Accounts</button>
     </div>`;
   });
-  html += `<button class="close-position-btn" style="margin-top:10px;width:100%;padding:10px;" onclick="closeAllPositions()">Close All Positions</button>`;
   container.innerHTML = html;
 }
 
@@ -272,18 +263,21 @@ function checkAlerts() {
     const eventTime = new Date(e.date).getTime();
     const minsUntil = (eventTime - now.getTime()) / 60000;
     if (minsUntil > 0 && minsUntil <= NEWS_GRACE_PERIOD) {
-      // Which accounts are affected?
-      const affected = openPositions.filter(p => {
-        if (p.newsRule === '5ers') return true; // 5ers funded cant have positions during news
-        if (p.newsRule === 'ftmo') return true; // FTMO funded restricted
-        return false;
+      // Which accounts are affected across all open positions?
+      const affected = [];
+      openPositions.forEach(p => {
+        p.accounts.forEach(acc => {
+          if (acc.newsRule === '5ers' || acc.newsRule === 'ftmo') {
+            affected.push(acc.name);
+          }
+        });
       });
       if (affected.length > 0) {
         alerts.push({
           type: minsUntil <= 3 ? 'critical' : 'warning',
           title: `⚠️ ${e.title} (${e.country}) in ${Math.ceil(minsUntil)}m`,
           detail: `Close affected positions before news event`,
-          accounts: affected.map(a => a.account),
+          accounts: affected,
           minsUntil: minsUntil
         });
       }
@@ -297,11 +291,13 @@ function checkAlerts() {
     closeTime.setUTCHours(21, 0, 0, 0); // 21:00 UTC = 17:00 ET
     const minsUntilClose = (closeTime.getTime() - now.getTime()) / 60000;
     if (minsUntilClose > 0 && minsUntilClose <= WEEKEND_WARN) {
+      const allAccounts = [];
+      openPositions.forEach(p => p.accounts.forEach(a => allAccounts.push(a.name)));
       alerts.push({
         type: minsUntilClose <= MARKET_CLOSE_WARN ? 'critical' : 'warning',
         title: `🕐 Market close in ${Math.ceil(minsUntilClose)}m — CLOSE ALL`,
         detail: 'No weekend holding. Close all positions before market close.',
-        accounts: openPositions.map(p => p.account),
+        accounts: allAccounts,
         minsUntil: minsUntilClose
       });
     }
@@ -312,11 +308,13 @@ function checkAlerts() {
   if (hour >= 19 && day >= 1 && day <= 4) {
     const minsUntilSessionEnd = (20 - hour) * 60 + (60 - now.getUTCMinutes());
     if (minsUntilSessionEnd <= 60 && minsUntilSessionEnd > 0) {
+      const allAccounts = [];
+      openPositions.forEach(p => p.accounts.forEach(a => allAccounts.push(a.name)));
       alerts.push({
         type: 'warning',
         title: `🌙 Session ending — spreads widening soon`,
         detail: 'Consider closing positions before overnight hold.',
-        accounts: openPositions.map(p => p.account),
+        accounts: allAccounts,
         minsUntil: minsUntilSessionEnd
       });
     }
